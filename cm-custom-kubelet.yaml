@@ -1,0 +1,24 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubelet-custom
+  namespace: kubelet-config
+  labels:
+    name: kubelet-config
+data:
+  00.yaml: |
+    apiVersion: kubelet.config.k8s.io/v1beta1
+    kind: KubeletConfiguration
+    cpuManagerPolicy: static
+    kubeReserved:
+      cpu: 250m
+  01.yaml: |
+    apiVersion: kubelet.config.k8s.io/v1beta1
+    kind: KubeletConfiguration
+    maxPods: 120
+  # 02.yaml: |
+  #   apiVersion: kubelet.config.k8s.io/v1beta1
+  #   kind: KubeletConfiguration
+  #   imageGCLowThresholdPercent: 90
+  #   imageGCHighThresholdPercent: 95

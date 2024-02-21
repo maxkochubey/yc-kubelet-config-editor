@@ -1,0 +1,66 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kubelet-config
+  namespace: kubelet-config
+  labels:
+    k8s-app: kubelet-config
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kubelet-config
+  template:
+    metadata:
+      labels:
+        k8s-app: kubelet-config
+    spec:
+      hostPID: true
+      hostIPC: true
+      tolerations:
+      - operator: Exists
+      containers:
+      - name: kubelet-config
+        image: docker.io/linuxserver/yq:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - bash
+        - /data/scripts/merge.sh
+        securityContext:
+          privileged: true
+        resources:
+          limits:
+            cpu: 50m
+            memory: 100Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: custom-configs
+          mountPath: /data/kubelet
+        - name: script
+          mountPath: /data/scripts
+        - name: kubelet-config-source
+          mountPath: /data/cfg-source
+        - name: kubelet-var-lib
+          mountPath: /data/var-lib
+      volumes:
+      - name: data
+        emptyDir: {}
+      - name: script
+        configMap:
+          name: kubelet-config-script
+          defaultMode: 0755
+      - name: custom-configs
+        configMap:
+          name: kubelet-custom
+      - name: kubelet-config-source
+        hostPath:
+          path: /home/kubernetes
+          type: Directory
+      - name: kubelet-var-lib
+        hostPath:
+          path: /var/lib/kubelet
+          type: Directory

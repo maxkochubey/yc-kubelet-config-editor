@@ -1,0 +1,46 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubelet-config-script
+  namespace: kubelet-config
+  labels:
+    name: kubelet-config
+data:
+  merge.sh: |
+    #!/usr/bin/env bash
+
+    TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+
+    SRC_CONFIG_DIR="/data/cfg-source"
+    SRC_CONFIG="${SRC_CONFIG_DIR}/kubelet-config.yaml"
+    CUSTOM_CONFIG_DIR="/data/kubelet"
+    CUSTOM_CONFIG="$(ls ${CUSTOM_CONFIG_DIR}/*.yaml)"
+    RESULT_CONFIG="/data/kubelet-merged.yaml"
+
+    KUBELET_ROOT_DIR="/data/var-lib"
+
+    while true; do
+      yq --yaml-output --indentless-lists --slurp \
+      'reduce .[] as $i (.[0]; . * $i)' \
+      $SRC_CONFIG $CUSTOM_CONFIG > $RESULT_CONFIG || exit 1
+
+      diff $SRC_CONFIG $RESULT_CONFIG > /dev/null
+
+      if [ $? -ne 0 ]; then
+        printf '%(%F %T)T\tUpdating "kubelet-config.yaml"\n'
+        cp $SRC_CONFIG "${SRC_CONFIG}.$(date +"%y%m%d_%H%M%S")"
+        cat $RESULT_CONFIG > $SRC_CONFIG
+
+        printf '%(%F %T)T\tRemoving CPU and memory manager state files\n'
+        rm "${KUBELET_ROOT_DIR}/cpu_manager_state"
+        rm "${KUBELET_ROOT_DIR}/memory_manager_state"
+
+        printf '%(%F %T)T\tRestarting Kubelet\n'
+        #systemd will get it back less than a minute
+        kill $(pidof kubelet)
+      else
+        printf '%(%F %T)T\tNo updates for Kubelet config - sleeping\n'
+      fi
+      sleep 60
+    done
