@@ -71,3 +71,5 @@ kubectl apply -f cm-script.yaml
 kubectl apply -f cm-custom-kubelet.yaml
 kubectl apply -f daemonset.yaml
 ```
+
+## Test
